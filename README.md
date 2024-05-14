@@ -1,4 +1,4 @@
-# Dokumentacja techniczna API w Node.js z wykorzystaniem MySQL
+# Dokumentacja techniczna API Biblioteki
 
 ## Wstęp
 Dokumentacja ta opisuje API napisane w języku JavaScript przy użyciu środowiska Node.js oraz bazy danych MySQL. API umożliwia interakcję z bazą danych poprzez HTTP zapytania.
