@@ -1,151 +1,111 @@
 const express = require('express');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const mysql = require('mysql');
-const handleAccount = require('./handleAccount');
 require('dotenv').config();
 
-// Create MySQL connection pool
 const pool = mysql.createPool({
+    connectionLimit: 10,
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE
 });
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const router = express.Router();
 
 // Middleware to parse JSON
-app.use(express.json());
+router.use(express.json());
 
-// Use the handleAccount routes
-app.use('/account', handleAccount);
+// Helper function to generate JWT
+const generateToken = (user) => {
+    return jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
+};
 
-// Endpoint to send data to MySQL
-app.post('/data', (req, res) => {
-    const { title, author, category, info } = req.body;
-    if (!title || !author || !category) {
-        return res.status(400).json({ error: 'Missing data' });
+// Create a new account
+router.post('/register', async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Missing username or password' });
     }
-    const query = 'INSERT INTO books (title, author, category, info) VALUES (?, ?, ?, ?)';
 
-    pool.query(query, [title, author, category, info], (error, results) => {
-        if (error) {
-            console.error('Error inserting data: ' + error.stack);
-            return res.status(500).json({ error: 'Error inserting data' });
-        }
-        res.status(200).json({ success: true, message: 'Data inserted successfully' });
-    });
-});
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const query = 'INSERT INTO users (username, password) VALUES (?, ?)';
 
-// Endpoint to retrieve data from MySQL
-app.get('/data', (req, res) => {
-    const query = 'SELECT * FROM books';
-
-    pool.query(query, (error, results) => {
-        if (error) {
-            console.error('Error retrieving data: ' + error.stack);
-            return res.status(500).json({ error: 'Error retrieving data' });
-        }
-        res.status(200).json(results);
-    });
-});
-
-// Endpoint to retrieve books by author
-app.get('/data/author/:author', (req, res) => {
-    const { author } = req.params;
-    const query = 'SELECT * FROM books WHERE author = ?';
-
-    pool.query(query, [author], (error, results) => {
-        if (error) {
-            console.error('Error retrieving data: ' + error.stack);
-            return res.status(500).json({ error: 'Error retrieving data' });
-        }
-        res.status(200).json(results);
-    });
-});
-
-// Endpoint to retrieve books by category
-app.get('/data/category/:category', (req, res) => {
-    const { category } = req.params;
-    const query = 'SELECT * FROM books WHERE category = ?';
-
-    pool.query(query, [category], (error, results) => {
-        if (error) {
-            console.error('Error retrieving data: ' + error.stack);
-            return res.status(500).json({ error: 'Error retrieving data' });
-        }
-        res.status(200).json(results);
-    });
-});
-
-// Endpoint to check if a book is loaned
-app.get('/data/loaned/:bookId', (req, res) => {
-    const { bookId } = req.params;
-    const query = 'SELECT * FROM loaned_books WHERE book_id = ?';
-
-    pool.query(query, [bookId], (error, results) => {
-        if (error) {
-            console.error('Error retrieving loan data: ' + error.stack);
-            return res.status(500).json({ error: 'Error retrieving loan data' });
-        }
-        if (results.length > 0) {
-            res.status(200).json({ loaned: true, loaned_to: results[0].loaned_to, loan_date: results[0].loan_date });
-        } else {
-            res.status(200).json({ loaned: false });
-        }
-    });
-});
-
-// Endpoint to loan a book
-app.post('/data/loan', (req, res) => {
-    const { book_id, loaned_to, loan_date } = req.body;
-    if (!book_id || !loaned_to || !loan_date) {
-        return res.status(400).json({ error: 'Missing data' });
-    }
-    const query = 'INSERT INTO loaned_books (book_id, loaned_to, loan_date) VALUES (?, ?, ?)';
-
-    pool.query(query, [book_id, loaned_to, loan_date], (error, results) => {
-        if (error) {
-            console.error('Error loaning book: ' + error.stack);
-            return res.status(500).json({ error: 'Error loaning book' });
-        }
-        res.status(200).json({ success: true, message: 'Book loaned successfully' });
-    });
-});
-
-// Endpoint to return a loaned book
-app.delete('/data/loan/:bookId', (req, res) => {
-    const { bookId } = req.params;
-    const query = 'DELETE FROM loaned_books WHERE book_id = ?';
-
-    pool.query(query, [bookId], (error, results) => {
-        if (error) {
-            console.error('Error returning loaned book: ' + error.stack);
-            return res.status(500).json({ error: 'Error returning loaned book' });
-        }
-        if (results.affectedRows > 0) {
-            res.status(200).json({ success: true, message: 'Book returned successfully' });
-        } else {
-            res.status(404).json({ error: 'Book not found' });
-        }
-    });
-});
-
-// Gracefully handle shutdowns
-process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received: closing HTTP server')
-    server.close(() => {
-        console.log('HTTP server closed')
-        pool.end((err) => {
-            if (err) {
-                console.error('Error closing MySQL pool: ' + err.stack);
-            } else {
-                console.log('MySQL pool closed');
+        pool.query(query, [username, hashedPassword], (error, results) => {
+            if (error) {
+                console.error('Error registering user: ' + error.stack);
+                return res.status(500).json({ error: 'Error registering user' });
             }
+            res.status(200).json({ success: true, message: 'User registered successfully' });
         });
+    } catch (error) {
+        console.error('Error hashing password: ' + error.stack);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Log into an account
+router.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Missing username or password' });
+    }
+
+    const query = 'SELECT * FROM users WHERE username = ?';
+    pool.query(query, [username], async (error, results) => {
+        if (error) {
+            console.error('Error fetching user: ' + error.stack);
+            return res.status(500).json({ error: 'Error logging in' });
+        }
+        if (results.length === 0) {
+            return res.status(400).json({ error: 'Invalid username or password' });
+        }
+
+        const user = results[0];
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ error: 'Invalid username or password' });
+        }
+
+        const token = generateToken(user);
+        res.status(200).json({ success: true, token });
     });
 });
 
-const server = app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+// Middleware to authenticate user using JWT
+const authenticate = (req, res, next) => {
+    const token = req.headers['authorization'];
+    if (!token) {
+        return res.status(403).json({ error: 'No token provided' });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to authenticate token' });
+        }
+        req.userId = decoded.id;
+        next();
+    });
+};
+
+// Check loaned books
+router.get('/loans', authenticate, (req, res) => {
+    const query = `
+        SELECT books.title, loaned_books.loan_date 
+        FROM loaned_books 
+        JOIN books ON loaned_books.book_id = books.id 
+        WHERE loaned_books.user_id = ? 
+        AND DATEDIFF(NOW(), loaned_books.loan_date) <= 90`;
+
+    pool.query(query, [req.userId], (error, results) => {
+        if (error) {
+            console.error('Error fetching loaned books: ' + error.stack);
+            return res.status(500).json({ error: 'Error fetching loaned books' });
+        }
+        res.status(200).json(results);
+    });
 });
+
+module.exports = router;
