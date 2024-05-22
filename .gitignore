@@ -1,5 +1,7 @@
-# folders #
 node_modules/
-
-# files #
+package.json
+package-lock.json
 localhost.env
+package-lock.json
+package.json
+W

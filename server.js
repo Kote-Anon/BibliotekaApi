@@ -16,6 +16,16 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use('/account', handleAccount);
 
+app.get('/status', (req, res) => {
+    pool.query('SELECT 1', (error) => {
+        if (error) {
+            console.error('Database connection error: ' + error.stack);
+            return res.status(500).json({ status: 'error', message: 'Database connection failed' });
+        }
+        res.status(200).json({ status: 'success', message: 'Database connection is active' });
+    });
+});
+
 app.post('/data', (req, res) => {
     const { title, author, category, info } = req.body;
     if (!title || !author || !category) {
