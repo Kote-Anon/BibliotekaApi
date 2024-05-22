@@ -1,46 +1,56 @@
 CREATE TABLE books (
-    book_id INT PRIMARY KEY AUTO_INCREMENT,
-    title VARCHAR(25),
-    author_id INT,
-    category_id INT
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    category VARCHAR(255) NOT NULL,
+    info TEXT
 );
 
-CREATE TABLE authors (
-    author_id INT PRIMARY KEY AUTO_INCREMENT,
-    first_name VARCHAR(25),
-    last_name VARCHAR(25)
+CREATE TABLE author (
+    id_author INT PRIMARY KEY AUTO_INCREMENT, 
+    author_name VARCHAR(25) NOT NULL,
+    author_surname VARCHAR(25) NOT NULL
 );
 
-CREATE TABLE categories (
-    category_id INT PRIMARY KEY AUTO_INCREMENT,
-    category_name VARCHAR(25)
+CREATE TABLE book_category (
+    id_category INT PRIMARY KEY AUTO_INCREMENT,
+    category_name VARCHAR(25) NOT NULL
+);
+
+CREATE TABLE readers (
+    id_reader INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(25) NOT NULL,
+    last_name VARCHAR(25) NOT NULL
 );
 
 CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    first_name VARCHAR(25),
-    last_name VARCHAR(25),
-    username VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL
+    id_user INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL,
+    password VARCHAR(50) NOT NULL,
+    email VARCHAR(50) NOT NULL
 );
+
+ALTER TABLE books
+ADD COLUMN id_author INT,
+ADD COLUMN id_category INT;
 
 ALTER TABLE books
 ADD CONSTRAINT fk_author
-    FOREIGN KEY (author_id) REFERENCES authors (author_id);
+    FOREIGN KEY(id_author) REFERENCES author(id_author);
 
 ALTER TABLE books
 ADD CONSTRAINT fk_category
-    FOREIGN KEY (category_id) REFERENCES book_categories (category_id);
+    FOREIGN KEY(id_category) REFERENCES book_category(id_category);
 
-CREATE TABLE loaned_books (
-    loan_id INT PRIMARY KEY AUTO_INCREMENT,
-    loan_date DATE,
+CREATE TABLE borrowings (
+    id_borrowing INT PRIMARY KEY AUTO_INCREMENT,
+    borrowing_date DATE,
     return_date DATE,
-    book_id INT,
-    FOREIGN KEY (book_id) REFERENCES books (book_id),
-    reader_id INT,
-    FOREIGN KEY (users_id) REFERENCES readers (reader_id)
+    id_book INT,
+    id_reader INT,
+    FOREIGN KEY(id_book) REFERENCES books(id),
+    FOREIGN KEY(id_reader) REFERENCES readers(id_reader)
 );
 
 ALTER TABLE books 
-DROP COLUMN borrowing_id;
+DROP COLUMN id_borrowing;

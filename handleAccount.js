@@ -13,16 +13,12 @@ const pool = mysql.createPool({
 });
 
 const router = express.Router();
-
-// Middleware to parse JSON
 router.use(express.json());
 
-// Helper function to generate JWT
 const generateToken = (user) => {
     return jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
-// Create a new account
 router.post('/register', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -32,7 +28,6 @@ router.post('/register', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const query = 'INSERT INTO users (username, password) VALUES (?, ?)';
-
         pool.query(query, [username, hashedPassword], (error, results) => {
             if (error) {
                 console.error('Error registering user: ' + error.stack);
@@ -46,7 +41,6 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Log into an account
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -74,7 +68,6 @@ router.post('/login', (req, res) => {
     });
 });
 
-// Middleware to authenticate user using JWT
 const authenticate = (req, res, next) => {
     const token = req.headers['authorization'];
     if (!token) {
@@ -90,7 +83,6 @@ const authenticate = (req, res, next) => {
     });
 };
 
-// Check loaned books
 router.get('/loans', authenticate, (req, res) => {
     const query = `
         SELECT books.title, loaned_books.loan_date 
